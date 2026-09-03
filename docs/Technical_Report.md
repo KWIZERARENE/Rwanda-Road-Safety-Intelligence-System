@@ -7,7 +7,7 @@
 ### EXECUTIVE SUMMARY
 Road safety is a major public-health and national security concern in Rwanda. According to official figures published in the **National Institute of Statistics of Rwanda (NISR) Statistical Yearbook 2024 (Table 14.2.6: Road Accidents)**, Rwanda recorded **9,995 total road accidents in 2023**, resulting in **761 fatal accidents**. 
 
-To move from anecdotal reporting to a data-driven road safety policy, this project developed the prototype **Rwanda Road Safety Intelligence System (RRSIS)**. Built upon **Hadoop Distributed File System (HDFS)** for scalable storage and **Apache Spark (PySpark DataFrame API)** as the distributed analytics engine, RRSIS processes high-volume crash records across 9 analytical tasks to determine *where, when, and under what circumstances accident risk is highest*.
+To move from anecdotal reporting to a data-driven road safety policy, this project developed the prototype **Rwanda Road Safety Intelligence System (RRSIS)**. Built upon **Hadoop Distributed File System (HDFS)** for scalable storage and **Apache Spark (PySpark DataFrame API)** as the distributed analytics engine, RRSIS processes high-volume crash records across 10 analytical tasks to determine *where, when, and under what circumstances accident risk is highest*.
 
 ---
 
@@ -138,10 +138,23 @@ Based strictly on empirical PySpark evidence, 5 actionable priorities were estab
    - *Evidence*: Top 3 ranked districts account for over 52.4% of national composite risk burden.
    - *Recommendation*: Install automated speed/red-light cameras and permanent traffic posts in Top 3 districts.
 
-4. **Priority 4: Adverse Weather & Road Surface Surface Management**
+4. **Priority 4: Adverse Weather & Road Surface Management**
    - *Evidence*: Wet/damp surfaces under rain rank #1 in multi-factor severity combinations (38% higher severity index).
    - *Recommendation*: High-friction asphalt resurfacing, drainage clearance, and dynamic rain warning electronic signs.
 
 5. **Priority 5: Commercial & Heavy Vehicle Speed Governor Audit**
    - *Evidence*: Heavy Goods Vehicles and Buses average 3.10 severity per crash (vs 1.62 passenger cars).
    - *Recommendation*: Mandate digital speed governor audits during annual inspection (contrôle technique) for all commercial trucks and buses.
+
+---
+
+### SECTION 10: GEOSPATIAL MAP PLOTTING & VISUALIZATION (TASK 10)
+
+#### 10.1 Coordinate Spatial Map Plotting
+Using PySpark coordinate filtering (`filter(Latitude.isNotNull() & Longitude.isNotNull() & (Latitude != 0) & (Longitude != 0))`) and Seaborn/Matplotlib rendering, Task 10 generates 2D geographical coordinate map plots:
+- **X-axis**: Longitude (°E)
+- **Y-axis**: Latitude (°N)
+- **Hue**: `Accident_Severity` (`Fatal`=Red, `Serious`=Orange, `Slight`=Blue)
+
+#### 10.2 Interactive HTML Leaflet Map
+Task 10 also builds an interactive Folium Leaflet web map (`output/visualizations/rrsis_interactive_geospatial_map.html`), allowing stakeholders to zoom, pan, and click on individual crash point markers with localized district popups and marker clusters.

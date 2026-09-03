@@ -12,6 +12,14 @@ Run standalone:
 import os
 import sys
 
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 try:
     from src.spark_session import get_spark_session
     from src.task7_risk_score import run as run_task7
@@ -82,7 +90,7 @@ PRIORITY 3: Target Spatial Hotspots via Composite Risk Ranking
   police posts dedicated specifically to the top 3 ranked high-risk districts identified 
   in the RRSIS Risk Score model.
 
-PRIORITY 4: Adverse Weather & Road Surface Surface Management
+PRIORITY 4: Adverse Weather & Road Surface Management
 --------------------------------------------------------------------------------
 - Data:
   Environmental condition attributes (`Weather_Conditions`, `Road_Surface_Conditions`).
@@ -115,7 +123,7 @@ PRIORITY 5: Commercial & Heavy Vehicle Speed Governor Audit
 """
     print(recommendations_text)
 
-    output_dir = os.path.join("output", "task9_recommendations")
+    output_dir = os.path.join(REPO_ROOT, "output", "task9_recommendations")
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, "management_priorities.txt"), "w", encoding="utf-8") as f:
         f.write(recommendations_text)

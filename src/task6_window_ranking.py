@@ -3,6 +3,12 @@ Task 6: Advanced Location Ranking with Window Functions (RRSIS Project)
 -----------------------------------------------------------------------
 - Calculates severity risk measure per location grouped by geographical category (Urban vs Rural Area).
 - Applies PySpark Window functions (row_number, rank, dense_rank) over partitions.
+- Demonstrates:
+  - Window specification creation: Window.partitionBy().orderBy()
+  - Window ranking functions: row_number(), rank(), dense_rank()
+  - Multi-condition boolean filtering with &
+  - Column calculation & renaming using select(..., col().alias())
+  - Analytical comparison of ranking behavior
 - Extracts and presents the Top 3 highest-risk locations within each geographical category.
 
 Run standalone:
@@ -11,6 +17,15 @@ Run standalone:
 
 import os
 import sys
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
@@ -47,12 +62,12 @@ def run(spark=None, df_sev=None):
         )
     )
 
-    # Define PySpark Window Specification
-    window_spec_row = Window.partitionBy("Urban_or_Rural_Area").orderBy(F.desc("Severity_Score"), F.desc("Fatal_Count"))
+    # Define PySpark Window Specifications
+    window_spec_row = Window.partitionBy("Urban_or_Rural_Area").orderBy(F.desc("Severity_Score"), F.desc("Total_Accidents"))
     window_spec_rank = Window.partitionBy("Urban_or_Rural_Area").orderBy(F.desc("Severity_Score"))
     window_spec_dense = Window.partitionBy("Urban_or_Rural_Area").orderBy(F.desc("Severity_Score"))
 
-    # Apply Window ranking functions
+    # Apply Window ranking functions (row_number, rank, dense_rank)
     ranked_locations = (
         location_category_agg
         .withColumn("Row_Num", F.row_number().over(window_spec_row))
@@ -60,18 +75,30 @@ def run(spark=None, df_sev=None):
         .withColumn("Dense_Rank", F.dense_rank().over(window_spec_dense))
     )
 
-    # Filter Top 3 highest-risk locations within each geographical category
+    # Demonstrate Multi-Condition Filtering on Window Output (& operator)
     top3_per_category = (
         ranked_locations
-        .filter(F.col("Row_Num") <= 3)
+        .filter((F.col("Row_Num") <= 3) & (F.col("Urban_or_Rural_Area") != "Unknown"))
         .orderBy("Urban_or_Rural_Area", "Row_Num")
     )
 
     print("--- TOP 3 HIGHEST-RISK LOCATIONS WITHIN EACH GEOGRAPHICAL CATEGORY ---")
     top3_per_category.show(truncate=False)
 
+    # Demonstrate select() with col().alias() on Window Output
+    print("\n--- WINDOW RANKING COMPARISON (Row_Num vs Rank vs Dense_Rank) ---")
+    top3_per_category.select(
+        "Urban_or_Rural_Area",
+        "Local_Authority_District",
+        "Severity_Score",
+        "Row_Num",
+        "Rank",
+        "Dense_Rank",
+        (F.col("Severity_Score") / F.col("Total_Accidents")).alias("Severity_Per_Crash")
+    ).show(truncate=False)
+
     # Save output to CSV
-    output_dir = os.path.join("output", "task6_window_ranking")
+    output_dir = os.path.join(REPO_ROOT, "output", "task6_window_ranking")
     os.makedirs(output_dir, exist_ok=True)
     top3_per_category.write.mode("overwrite").csv(
         os.path.join(output_dir, "top3_locations_per_category.csv"), header=True

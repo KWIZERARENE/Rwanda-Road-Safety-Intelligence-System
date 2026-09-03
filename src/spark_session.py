@@ -6,6 +6,15 @@ Provides a shared PySpark SparkSession configured using central settings from sr
 
 import sys
 import os
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 
 try:

@@ -3,7 +3,12 @@ Task 3: Temporal Accident Intelligence (RRSIS Project)
 ------------------------------------------------------
 - Analyzes accident distribution across temporal dimensions: Hour of Day, Day of Week, Month, and Weekday vs Weekend.
 - Derives custom time window categories: Late Night, Morning, Afternoon, Evening, Night.
-- Ranks the 5 highest-risk temporal periods with exact numerical evidence.
+- Demonstrates:
+  - Multi-condition boolean filtering with & operator
+  - Temporal feature extraction (hour, month, split)
+  - Inline calculation with select(..., col().alias())
+  - Random sampling with sample(False, fraction)
+  - Aggregations with groupBy(), agg(), count(), sum(), and orderBy()
 
 Run standalone:
     python src/task3_temporal_analysis.py
@@ -11,6 +16,15 @@ Run standalone:
 
 import os
 import sys
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -41,13 +55,13 @@ def add_temporal_features(df):
     if "Month" not in df.columns:
         df = df.withColumn("Month", F.month(F.col("Accident_Date")))
         
-    # Weekday vs Weekend flag
+    # Weekday vs Weekend flag using multi-condition isin check
     df = df.withColumn(
         "Is_Weekend",
         F.when(F.col("Day_of_Week").isin("Saturday", "Sunday"), "Weekend").otherwise("Weekday")
     )
 
-    # Derive custom time period categories
+    # Derive custom time period categories:
     # Late Night: 00:00 - 04:59
     # Morning:    05:00 - 11:59
     # Afternoon:  12:00 - 16:59
@@ -80,6 +94,12 @@ def run(spark=None, df_clean=None):
     df_temp = add_temporal_features(df_clean)
     total_accidents = df_temp.count()
 
+    # Demonstrate Representative Sample Inspection on Temporal Features
+    print("--- TEMPORAL FEATURE SAMPLE INSPECTION (sample(False, 0.10)) ---")
+    df_temp.sample(False, 0.10).select(
+        "Accident_Severity", "Day_of_Week", "Hour_of_Day", "Is_Weekend", "Time_Period"
+    ).show(5, vertical=False)
+
     # 1. Accidents by Custom Time Period Category
     print("--- 1. ACCIDENT CONCENTRATION BY TIME PERIOD CATEGORY ---")
     period_df = (
@@ -93,6 +113,14 @@ def run(spark=None, df_clean=None):
         .orderBy(F.desc("Accident_Count"))
     )
     period_df.show(truncate=False)
+
+    # Demonstrate select() with col().alias() on Aggregated Metrics
+    print("Time Period Proportion Breakdown (select with alias):")
+    period_df.select(
+        "Time_Period",
+        "Accident_Count",
+        (F.col("Accident_Count") / total_accidents).alias("Proportion_Of_Total")
+    ).show(truncate=False)
 
     # 2. Weekday vs Weekend Analysis
     print("\n--- 2. ACCIDENTS BY WEEKDAY VS WEEKEND ---")
@@ -140,7 +168,7 @@ def run(spark=None, df_clean=None):
     top5_temporal.show(truncate=False)
 
     # Save output to CSV & report
-    output_dir = os.path.join("output", "task3_temporal")
+    output_dir = os.path.join(REPO_ROOT, "output", "task3_temporal")
     os.makedirs(output_dir, exist_ok=True)
     top5_temporal.write.mode("overwrite").csv(os.path.join(output_dir, "top5_temporal_windows.csv"), header=True)
 

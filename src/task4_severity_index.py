@@ -4,6 +4,13 @@ Task 4: Accident Severity Index (RRSIS Project)
 - Assigns explicit severity weights: Slight (1), Serious (3), Fatal (5).
 - Computes Severity Score = sum(Accident_Count * Severity_Weight) across dimensions:
   Location (District), Road Type, Vehicle Type, and Time Period.
+- Demonstrates:
+  - Conditional withColumn() severity weight assignment
+  - Arithmetic operations inside withColumn()
+  - Multi-condition filtering with & operator
+  - Statistical diagnostics via describe()
+  - Column calculation & renaming using select(..., col().alias())
+  - Grouped aggregations with groupBy(), agg(), sum(), count(), avg(), round(), orderBy()
 - Identifies locations with the highest severity burden.
 - Explains why high accident volume does not equal maximum safety risk.
 
@@ -13,6 +20,15 @@ Run standalone:
 
 import os
 import sys
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -27,6 +43,7 @@ except ImportError:
 def add_severity_weights(df):
     """
     Applies explicit weights: Slight -> 1, Serious -> 3, Fatal -> 5.
+    Also demonstrates arithmetic withColumn operation.
     """
     df = df.withColumn(
         "Severity_Weight",
@@ -35,6 +52,8 @@ def add_severity_weights(df):
          .when(F.col("Accident_Severity") == "Fatal", 5)
          .otherwise(1)
     )
+    # Demonstrate arithmetic withColumn operation
+    df = df.withColumn("Severity_Weight_Double", F.col("Severity_Weight") * 2)
     return df
 
 
@@ -53,8 +72,22 @@ def run(spark=None, df_temp=None):
     df_sev = add_severity_weights(df_temp)
     total_accidents = df_sev.count()
 
+    # Demonstrate Statistical Summary on Severity Metrics
+    print("--- SEVERITY WEIGHT STATISTICAL SUMMARY (describe) ---")
+    df_sev.select("Severity_Weight", "Severity_Weight_Double").describe().show(vertical=False)
+
+    # Demonstrate Multi-Condition Filtering (High Severity & Specific Road Type)
+    if "Road_Type" in df_sev.columns:
+        print("--- HIGH SEVERITY FILTERING (Severity_Weight >= 3 & Road_Type != 'Unknown') ---")
+        severe_crashes_df = df_sev.filter(
+            (F.col("Severity_Weight") >= 3) & 
+            (F.col("Road_Type") != "Unknown")
+        )
+        print(f" Total Severe Crashes (Serious/Fatal): {severe_crashes_df.count():,}")
+        severe_crashes_df.select("Accident_Severity", "Severity_Weight", "Road_Type").show(5)
+
     # 1. Severity Score by Location (District / Local Authority)
-    print("--- 1. SEVERITY SCORE BY LOCATION (DISTRICT) ---")
+    print("\n--- 1. SEVERITY SCORE BY LOCATION (DISTRICT) ---")
     location_severity = (
         df_sev.groupBy("Local_Authority_District")
         .agg(
@@ -68,6 +101,15 @@ def run(spark=None, df_temp=None):
         .orderBy(F.desc("Severity_Score"))
     )
     location_severity.show(10, truncate=False)
+
+    # Demonstrate Inline Calculation with select and alias()
+    print("Location Severity Index Ratio Calculation (select with alias):")
+    location_severity.select(
+        "Local_Authority_District",
+        "Total_Accidents",
+        "Severity_Score",
+        (F.col("Severity_Score") / F.col("Total_Accidents")).alias("Severity_To_Accident_Ratio")
+    ).show(5, truncate=False)
 
     # 2. Severity Score by Road Type
     print("\n--- 2. SEVERITY SCORE BY ROAD TYPE ---")
@@ -133,7 +175,7 @@ def run(spark=None, df_temp=None):
 """
     print(explanation)
 
-    output_dir = os.path.join("output", "task4_severity")
+    output_dir = os.path.join(REPO_ROOT, "output", "task4_severity")
     os.makedirs(output_dir, exist_ok=True)
     location_severity.write.mode("overwrite").csv(os.path.join(output_dir, "location_severity_index.csv"), header=True)
     

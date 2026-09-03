@@ -5,6 +5,8 @@ Edit the HDFS_DATASET_PATH below whenever your HDFS dataset directory or filenam
 All PySpark ingestion modules and tasks import dataset settings from this single file.
 """
 
+import os
+
 # ------------------------------------------------------------------------------
 # HDFS DATASET PATH CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -13,6 +15,13 @@ HDFS_DATASET_PATH = "hdfs://localhost:9000/user/hadoop/my_dataset/Road Accident 
 
 # Alternative HDFS directory paths (for reference):
 # HDFS_DATASET_PATH = "hdfs://localhost:9000/user/hadoop/rrsis/raw/road_accidents_23cols.csv"
+
+# ------------------------------------------------------------------------------
+# LOCAL FALLBACK PATH (For testing without active HDFS cluster)
+# ------------------------------------------------------------------------------
+LOCAL_DATASET_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "raw", "road_accidents_23cols.csv")
+)
 
 # ------------------------------------------------------------------------------
 # SPARK ENGINE CONFIGURATION

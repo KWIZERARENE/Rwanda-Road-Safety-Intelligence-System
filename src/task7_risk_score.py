@@ -6,6 +6,13 @@ Task 7: Composite Road Safety Risk Score (RRSIS Project)
     1. Normalized Accident Frequency (Weight = 0.35)
     2. Normalized Weighted Severity Score (Weight = 0.40)
     3. Normalized High-Risk Condition Proportion (Night/Rain/High Speed) (Weight = 0.25)
+- Demonstrates:
+  - Multi-condition boolean logic with & and |
+  - Min-Max statistical aggregation (min, max, collect)
+  - Min-Max normalization arithmetic with withColumn()
+  - Multi-attribute composite weighting formula
+  - Inline column calculation using select(..., col().alias())
+  - Multi-condition filtering on model output
 - Ranks locations for targeted police and engineering intervention.
 
 Run standalone:
@@ -14,6 +21,15 @@ Run standalone:
 
 import os
 import sys
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -38,7 +54,7 @@ def run(spark=None, df_sev=None):
     print("==========================================================")
 
     # 1. Define high-risk adverse condition flag per accident
-    # Adverse conditions: Night/Late Night, Wet/Snow/Ice road surface, or Raining/Fog weather
+    # Multi-condition boolean logic (Night/Late Night OR Wet/Snow/Ice OR Rain/Fog)
     df_flagged = df_sev.withColumn(
         "Is_Adverse_Condition",
         F.when(
@@ -62,7 +78,7 @@ def run(spark=None, df_sev=None):
         .withColumn("Adverse_Share", F.col("Adverse_Accidents_Count") / F.col("Frequency"))
     )
 
-    # 3. Compute Min and Max stats for normalization
+    # 3. Compute Min and Max stats for normalization using select & collect()
     stats = location_raw.select(
         F.min("Frequency").alias("min_freq"),
         F.max("Frequency").alias("max_freq"),
@@ -81,7 +97,7 @@ def run(spark=None, df_sev=None):
     range_s = max_s - min_s if max_s > min_s else 1.0
     range_a = max_a - min_a if max_a > min_a else 1.0
 
-    # 4. Apply Min-Max Normalization and Composite Formula
+    # 4. Apply Min-Max Normalization and Composite Formula via Arithmetic withColumn
     # Formula: Risk_Score = (0.40 * Norm_Sev + 0.35 * Norm_Freq + 0.25 * Norm_Adv) * 100
     risk_scored_df = (
         location_raw
@@ -105,6 +121,22 @@ def run(spark=None, df_sev=None):
         "Local_Authority_District", "Frequency", "Severity_Score",
         "Fatal_Count", "Adverse_Share", "Composite_Risk_Score"
     ).show(truncate=False)
+
+    # Demonstrate Multi-Condition Filtering (& operator)
+    print("\n--- PRIORITY INTERVENTION DISTRICTS (Composite_Risk_Score >= 50.0 & Frequency > 100) ---")
+    priority_districts = risk_scored_df.filter(
+        (F.col("Composite_Risk_Score") >= 50.0) & 
+        (F.col("Frequency") > 100)
+    )
+    priority_districts.select("Local_Authority_District", "Frequency", "Composite_Risk_Score").show(truncate=False)
+
+    # Demonstrate Inline Column Calculation with alias()
+    print("\n--- RISK DENSITY BREAKDOWN (select with alias) ---")
+    risk_scored_df.select(
+        "Local_Authority_District",
+        "Composite_Risk_Score",
+        (F.col("Composite_Risk_Score") / F.col("Frequency")).alias("Risk_Per_Crash_Unit")
+    ).show(5, truncate=False)
 
     model_justification = f"""
 ================================================================================
@@ -134,7 +166,7 @@ def run(spark=None, df_sev=None):
 """
     print(model_justification)
 
-    output_dir = os.path.join("output", "task7_risk_score")
+    output_dir = os.path.join(REPO_ROOT, "output", "task7_risk_score")
     os.makedirs(output_dir, exist_ok=True)
     risk_scored_df.write.mode("overwrite").csv(
         os.path.join(output_dir, "ranked_location_risk_scores.csv"), header=True

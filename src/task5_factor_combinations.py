@@ -4,6 +4,12 @@ Task 5: Dangerous-Factor Combination Analysis (RRSIS Project)
 - Investigates multi-dimensional risk factor tuples across Road Type, Speed Limit,
   Weather Conditions, Road Surface Conditions, Light Conditions, Time Period, and Vehicle Type.
 - Ranks the Top 10 dangerous factor combinations based on Total Severity Score and Fatality Ratio.
+- Demonstrates:
+  - Multi-factor tuple aggregation via groupBy(*factors)
+  - Multi-condition boolean filtering with &
+  - PySpark aggregation functions: count(), sum(), avg(), round(), alias()
+  - Inline column calculation using select(..., col().alias())
+  - Representative dataset sampling via sample()
 
 Run standalone:
     python src/task5_factor_combinations.py
@@ -11,6 +17,15 @@ Run standalone:
 
 import os
 import sys
+
+# Ensure repository root and src directory are in sys.path
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -44,6 +59,7 @@ def run(spark=None, df_sev=None):
     available_factors = [c for c in factor_cols if c in df_sev.columns]
     print(f"Analyzing combinations using factors: {available_factors}\n")
 
+    # Grouped Aggregation across Multi-Factor Tuple
     top10_combinations = (
         df_sev.groupBy(*available_factors)
         .agg(
@@ -64,7 +80,25 @@ def run(spark=None, df_sev=None):
     print("--- TOP 10 DANGEROUS FACTOR COMBINATIONS (RANKED BY SEVERITY SCORE) ---")
     top10_combinations.show(10, truncate=False)
 
-    output_dir = os.path.join("output", "task5_factor_combinations")
+    # Demonstrate Multi-Condition Filtering on Combination Metrics (& operator)
+    print("\n--- HIGH-RISK COMBINATIONS FILTER (Total_Severity_Score > 50 & Fatality_Rate_Pct > 5.0) ---")
+    filtered_combinations = top10_combinations.filter(
+        (F.col("Total_Severity_Score") > 50) & 
+        (F.col("Fatality_Rate_Pct") > 5.0)
+    )
+    filtered_combinations.show(truncate=False)
+
+    # Demonstrate Column Calculation & Renaming with alias()
+    print("\n--- COMBINATION SEVERITY DENSITY (select with alias) ---")
+    top10_combinations.select(
+        "Road_Type",
+        "Speed_limit",
+        "Time_Period",
+        "Total_Severity_Score",
+        (F.col("Total_Severity_Score") / F.col("Accident_Count")).alias("Severity_Density_Ratio")
+    ).show(5, truncate=False)
+
+    output_dir = os.path.join(REPO_ROOT, "output", "task5_factor_combinations")
     os.makedirs(output_dir, exist_ok=True)
     top10_combinations.write.mode("overwrite").csv(
         os.path.join(output_dir, "top10_factor_combinations.csv"), header=True

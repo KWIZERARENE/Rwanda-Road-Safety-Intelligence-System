@@ -1,0 +1,14 @@
+# Rwanda Road Safety Intelligence System (RRSIS) Dependencies
+
+# PySpark Analytics Engine
+pyspark>=3.3.0
+
+# Data Manipulation & Export Utilities
+pandas>=1.5.0
+openpyxl>=3.0.0
+python-docx>=0.8.11
+
+# Data Visualization & Reporting
+matplotlib>=3.5.0
+seaborn>=0.11.2
+findspark>=2.0.0

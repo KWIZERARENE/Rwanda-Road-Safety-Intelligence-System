@@ -67,10 +67,7 @@
 12. **Rwandan Implementation Framework & Recommendations**
     - 12.1 Adapting RRSIS to Rwanda National Police & MININFRA Infrastructure
     - 12.2 Gerayo Amahoro National Safety Campaign Alignment
-13. **Task 10: Viva-Voce Defense Preparation Guide**
-    - 13.1 Team Member Presentation Allocation
-    - 13.2 Rigorous Technical Q&A Directory & Distributed Systems Defenses
-14. **Conclusion & References**
+13. **Conclusion & References**
 
 ---
 
@@ -565,55 +562,12 @@ Rwanda's national road safety initiative, **Gerayo Amahoro** ("Arrive Safely"), 
 
 ---
 
-### SECTION 13: TASK 10 - VIVA-VOCE DEFENSE PREPARATION GUIDE (10 MARKS)
-
-#### 13.1 Team Member Presentation & Defense Allocation
-```
-+---------------------------------------------------------------------------------------------------+
-| VIVA-VOCE PRESENTATION ROLE DELEGATION                                                            |
-+--------------------------+--------+---------------------------------------------------------------+
-| Team Member              | Reg ID | Assigned Presentation Scope & Technical Defense Domain        |
-+--------------------------+--------+---------------------------------------------------------------+
-| AMIE MARIE FLORA         | 101405 | Tasks 2, 6, 7: Data Quality Engineering, Window Functions,    |
-| DUSHIMUMUKIZA            |        | Composite Risk Scoring & Normalization Methodology            |
-+--------------------------+--------+---------------------------------------------------------------+
-| KWIZERA RENE             | 101379 | Tasks 1, 8: HDFS Architecture, Spark Ingestion, Catalyst      |
-|                          |        | Execution Plans, Shuffle Mechanics, and cache() Optimization  |
-+--------------------------+--------+---------------------------------------------------------------+
-| GRACE TETA               | 101378 | Tasks 3, 4, 5, 9: Temporal Dynamics, Severity Score Modeling, |
-|                          |        | Factor Combinations, Management Recommendations & Policy     |
-+--------------------------+--------+---------------------------------------------------------------+
-```
-
-#### 13.2 Technical Q&A Directory & Distributed Systems Defenses
-
-**Q1: Why is a shuffle operation expensive in Apache Spark, and which transformations caused it in your project?**  
-*Model Defense (Kwizera Rene)*:  
-"A shuffle occurs when wide transformations like `groupBy('Local_Authority_District')` or `orderBy()` require redistributing data across executors. Because partitions are initially distributed across cluster nodes, Spark must execute `Exchange hashpartitioning`:
-1. Mappers partition data and write serialized buckets to local disk.
-2. Reducers fetch these blocks across the physical network.
-3. Reducers merge the streams to compute final aggregations.
-Shuffling involves disk I/O, network transfer, and CPU serialization, making it the primary performance bottleneck in distributed workloads."
-
-**Q2: What is the difference between an Action, a Job, a Stage, and a Task in your codebase?**  
-*Model Defense (Kwizera Rene)*:  
-"An **Action** (such as `count()` or `show()`) triggers execution by passing the lazy DataFrame lineage to the `DAGScheduler`. Each Action initiates exactly one **Job**. The `DAGScheduler` divides the Job into **Stages** at shuffle boundaries (where wide dependencies exist). Each Stage consists of a set of parallel **Tasks**—exactly one task per RDD partition—which are executed concurrently by CPU threads on worker executors."
-
-**Q3: Where did you use `cache()` in your pipeline, and why is it necessary?**  
-*Model Defense (Amie Marie Flora Dushimumukiza)*:  
-"We applied `df_clean.cache()` immediately after Task 2 data cleaning. Because RRSIS features a branching DAG where Tasks 3 through 9 all branch from `df_clean`, omitting `cache()` would force Spark to re-evaluate the upstream lineage from scratch for every action—re-reading 307,973 records from HDFS and repeating the cleaning steps 6+ times. Caching pins sanitized partitions in executor memory, reducing overall pipeline execution latency by over 70%."
-
-**Q4: Why did your team decide not to simply drop rows with missing values in Task 2?**  
-*Model Defense (Amie Marie Flora Dushimumukiza)*:  
-"Naive row deletion via `dropna()` would have eliminated over 12,400 records, including 380 fatal accidents. This would artificially deflate national casualty totals and introduce geographic bias toward well-documented urban incidents. Instead, we imputed missing categorical variables with `'Unknown'` and nullified invalid coordinates and speed limits, preserving every record for gross casualty and temporal analysis."
-
-**Q5: Why is the location with the most accidents not necessarily the location with the greatest safety risk?**  
-*Model Defense (Grace Teta)*:  
-"Urban intersections often record hundreds of low-speed, minor collisions ('Slight', weight = 1), generating high frequency but moderate human trauma. In contrast, rural corridors (e.g. RN1, RN3) experience lower crash counts, but high proportions of high-speed head-on collisions ('Fatal', weight = 5; 'Serious', weight = 3). Relying solely on accident counts misdirects enforcement resources away from the highways where the majority of fatalities occur."
+> [!NOTE]
+> **Key Defense Sample**: **Why `cache()` is essential:** We placed `df_clean.cache()` immediately after Task 2 because Tasks 3 through 9 branch from `df_clean`. Without caching, each action forces Spark to re-evaluate the lineage from HDFS, repeating the cleaning 6+ times. Caching pins sanitized partitions in RAM, yielding a 70.8% speedup.
 
 ---
 
-### SECTION 14: CONCLUSION & REFERENCES
+### SECTION 13: CONCLUSION & REFERENCES
 
 The **Rwanda Road Safety Intelligence System (RRSIS)** proves that combining distributed storage (**HDFS**) with in-memory distributed analytics (**Apache Spark**) enables rapid processing of massive accident datasets, transforming raw crash logs into actionable intelligence. By implementing rigorous data cleaning, temporal analysis, multi-attribute factor combinations, window-based location rankings, and multi-dimensional risk scoring, RRSIS provides national authorities with an evidence-based roadmap to save lives on Rwanda's roads.
 

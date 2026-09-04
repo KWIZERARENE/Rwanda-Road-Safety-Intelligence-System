@@ -92,7 +92,7 @@ Or open directly within VS Code or JupyterLab. The notebook reads the dataset di
 | **Task 7** | Composite Risk Score | 0–100 Multi-dimensional Composite Risk Score combining normalized Severity (40%), Frequency (35%), and Adverse Conditions (25%). |
 | **Task 8** | Spark Execution Analysis | Catalyst plan analysis via `df.explain(True)`, Action vs Job vs Stage vs Task mapping, Shuffle causes, and `cache()` benchmarking. |
 | **Task 9** | 5 Management Priorities | 5 actionable priorities following $\text{Data} \rightarrow \text{Spark Analysis} \rightarrow \text{Evidence} \rightarrow \text{Recommendation}$. |
-| **Task 10**| Geospatial Map & Defense | Inline 2D coordinate scatterplot color-coded by severity and complete Viva-Voce oral defense guide. |
+| **Task 10**| Geospatial Mapping & Visualizations | Inline 2D coordinate scatterplot color-coded by severity and spatial density risk heatmaps. |
 
 ---
 

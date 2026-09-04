@@ -9,53 +9,29 @@ Sourced against statistical benchmarks from the **National Institute of Statisti
 ---
 
 ### 2. Repository Directory Structure
+The repository is strictly structured into 3 core directories for maximum clarity and ease of evaluation:
 ```
-rrsis/
-├── README.md                          # Project overview, setup & run instructions
-├── requirements.txt                   # pyspark, pandas, python-docx, etc.
-├── hdfs_setup_commands.sh             # HDFS mkdir/put shell commands (Task 1)
+Midterm1_repo/
+├── README.md                          # Project overview, setup & instructions
+├── requirements.txt                   # pyspark, pandas, python-docx, matplotlib, seaborn
+├── hdfs_setup_commands.sh             # HDFS directory creation and dataset upload script
 │
-├── data/
-│   ├── raw/
-│   │   └── road_accidents_23cols.csv  # Kaggle surrogate dataset (23 columns)
-│   └── hdfs_stage/                    # Local staging copy before `hdfs dfs -put`
+├── docs/                              # Technical reports & presentation guides
+│   ├── Technical_Report.docx          # 15-Page Academic Standard Technical Report (Word .docx)
+│   ├── Technical_Report.md            # Comprehensive Markdown Technical Report
+│   └── Code_Explanation_Guide.md      # Detailed line-by-line PySpark code guide & viva-voce prep
 │
-├── src/
-│   ├── __init__.py
-│   ├── spark_session.py               # Shared SparkSession builder + HDFS config
-│   ├── task1_ingestion.py             # HDFS + Spark data ingestion
-│   ├── task2_data_quality.py          # Missing values, duplicates, cleaning
-│   ├── task3_temporal_analysis.py     # Hour/day/month/weekday risk periods
-│   ├── task4_severity_index.py        # Weighted Severity Score Index
-│   ├── task5_factor_combinations.py   # Dangerous factor-combination ranking
-│   ├── task6_window_ranking.py        # Top-3 per category via Window functions
-│   ├── task7_risk_score.py            # Composite Road Safety Risk Score
-│   ├── task8_performance_analysis.py  # explain(), shuffles, cache() analysis
-│   ├── task9_recommendations.py       # Final 5 management priorities
-│   └── run_pipeline.py                # Orchestrates Tasks 1–9 end-to-end
+├── output/                            # Output figures & cartographic graphics
+│   └── figures/                       # High-resolution PNG plots generated directly from code
+│       ├── geographical_accident_hotspots_map.png
+│       ├── corridor_risk_and_heatmaps.png
+│       ├── temporal_accident_intelligence.png
+│       ├── top10_dangerous_factor_combinations.png
+│       ├── road_safety_risk_score_model.png
+│       └── spark_dag_execution_architecture.png
 │
-├── notebooks/
-│   └── RRSIS_Full_Analysis.ipynb      # Presentation-friendly notebook version
-│
-├── scripts/
-│   ├── upload_to_hdfs.sh              # Convenience wrapper for HDFS upload
-│   └── generate_docx_report.py        # Script to generate Technical_Report.docx
-│
-├── output/                            # Spark write() CSV/Parquet results per task
-│   ├── task1_ingestion/
-│   ├── task2_data_quality/
-│   ├── task3_temporal/
-│   ├── task4_severity/
-│   ├── task5_factor_combinations/
-│   ├── task6_window_ranking/
-│   ├── task7_risk_score/
-│   ├── task8_performance/
-│   ├── task9_recommendations/
-│   └── screenshots/                   # HDFS UI, Spark UI, terminal evidence
-│
-└── docs/
-    ├── Technical_Report.md            # Markdown technical report
-    └── Technical_Report.docx          # Word document technical report
+└── notebooks/                         # Master PySpark Analytics Notebook
+    └── RRSIS_Full_Analysis.ipynb      # The single, self-contained notebook covering Tasks 1–10
 ```
 
 ---
@@ -92,48 +68,42 @@ hdfs dfs -ls /user/hadoop/rrsis/raw
 
 ### 4. Running the Analytics Pipeline
 
-#### Option A: End-to-End Orchestration (Tasks 1–9)
-```bash
-python src/run_pipeline.py
-```
+The entire end-to-end RRSIS analytics workload (Tasks 1 through 10) is fully consolidated within the master Jupyter Notebook.
 
-#### Option B: Individual Task Execution
-```bash
-python src/task1_ingestion.py
-python src/task2_data_quality.py
-python src/task3_temporal_analysis.py
-python src/task4_severity_index.py
-python src/task5_factor_combinations.py
-python src/task6_window_ranking.py
-python src/task7_risk_score.py
-python src/task8_performance_analysis.py
-python src/task9_recommendations.py
-```
-
-#### Option C: Interactive Jupyter Notebook
+#### Launching the Master Notebook
 ```bash
 jupyter notebook notebooks/RRSIS_Full_Analysis.ipynb
 ```
+Or open directly within VS Code or JupyterLab. The notebook reads the dataset directly from Hadoop HDFS:
+`hdfs://localhost:9000/road_safety_dataset/Road Accident Data.csv`
 
 ---
 
-### 5. Task Summary & Analytical Scope
+### 5. Task Summary & Analytical Scope in Master Notebook
 
-| Task | Module | Key Operations & Deliverables |
+| Task | Scope in Notebook | Key PySpark Operations & Outputs |
 |---|---|---|
-| **Task 1** | `task1_ingestion.py` | Load dataset from `hdfs://localhost:9000/...`, display schema, total count, column metadata. |
-| **Task 2** | `task2_data_quality.py` | Audit missing values, deduplicate records, fix typos ('Fetal'->'Fatal'), impute 'Unknown', nullify zero coordinates. |
-| **Task 3** | `task3_temporal_analysis.py` | Aggregate by Hour, Day of Week, Month, Weekend vs Weekday, and custom Time Periods (Night, Morning, Afternoon, Evening, Late Night). |
-| **Task 4** | `task4_severity_index.py` | Calculate Weighted Severity Score ($\text{Slight}=1, \text{Serious}=3, \text{Fatal}=5$) across locations, road types, and vehicle types. |
-| **Task 5** | `task5_factor_combinations.py` | Group by multi-factor tuples (Road Type, Speed Limit, Weather, Light, Time Period) and rank Top 10 dangerous combinations. |
-| **Task 6** | `task6_window_ranking.py` | Compute Top-3 highest-risk locations within every geographic category using Spark `Window.partitionBy()` and `row_number()`, `rank()`, `dense_rank()`. |
-| **Task 7** | `task7_risk_score.py` | Build normalized Composite Road Safety Risk Score (0–100 scale) combining normalized frequency, severity score, and adverse condition shares. |
-| **Task 8** | `task8_performance_analysis.py` | Execute `df.explain(True)`, analyze physical execution stages, wide/narrow transformations, shuffle causes, and `cache()` performance. |
-| **Task 9** | `task9_recommendations.py` | Define 5 actionable management priorities following `Data → Spark Analysis → Evidence → Recommendation`. |
+| **Task 1** | HDFS Data Ingestion | Direct HDFS read, `printSchema()`, `describe().show()`, partition diagnostics via `spark_partition_id()`. |
+| **Task 2** | Data Quality Engineering | Audit missing values, deduplicate records, fix typos (`Fetal`->`Fatal`), impute `Unknown`, nullify zero coordinates, and call `cache()`. |
+| **Task 3** | Temporal Intelligence | Hourly crash curves, weekday vs. weekend risk, and 5 custom time periods (`Late Night`, `Morning`, `Afternoon`, `Evening`, `Night`). |
+| **Task 4** | Accident Severity Index | Weighted Severity Score ($\text{Slight}=1, \text{Serious}=3, \text{Fatal}=5$); frequency vs severity risk divergence. |
+| **Task 5** | Dangerous Factor Combinations | Multi-attribute grouping (Road Type, Speed Limit, Weather, Light, Time Period) and Top 10 dangerous combinations. |
+| **Task 6** | Window Location Rankings | Top-3 highest-risk locations in Urban vs Rural categories using `Window.partitionBy()` and `row_number()`, `rank()`, `dense_rank()`. |
+| **Task 7** | Composite Risk Score | 0–100 Multi-dimensional Composite Risk Score combining normalized Severity (40%), Frequency (35%), and Adverse Conditions (25%). |
+| **Task 8** | Spark Execution Analysis | Catalyst plan analysis via `df.explain(True)`, Action vs Job vs Stage vs Task mapping, Shuffle causes, and `cache()` benchmarking. |
+| **Task 9** | 5 Management Priorities | 5 actionable priorities following $\text{Data} \rightarrow \text{Spark Analysis} \rightarrow \text{Evidence} \rightarrow \text{Recommendation}$. |
+| **Task 10**| Geospatial Map & Defense | Inline 2D coordinate scatterplot color-coded by severity and complete Viva-Voce oral defense guide. |
 
 ---
 
-### 6. Technical Report & Deliverables
-- **Technical Report (Word)**: `docs/Technical_Report.docx`
-- **Technical Report (Markdown)**: `docs/Technical_Report.md`
-- **Report Generator Script**: `python scripts/generate_docx_report.py`
+### 6. Technical Deliverables (Exam Rubric Alignment)
+- **15-Page Standard Technical Report (Word)**: [`docs/Technical_Report.docx`](docs/Technical_Report.docx) (4.05 MB formatted document with all empirical figures embedded)
+- **Technical Report (Markdown)**: [`docs/Technical_Report.md`](docs/Technical_Report.md)
+- **Code Explanation & Defense Guide**: [`docs/Code_Explanation_Guide.md`](docs/Code_Explanation_Guide.md)
+- **Master PySpark Notebook**: [`notebooks/RRSIS_Full_Analysis.ipynb`](notebooks/RRSIS_Full_Analysis.ipynb)
+- **Output Empirical Figures**: [`output/figures/`](output/figures/)
+
+#### Project Group Members:
+- **101405 AMIE MARIE FLORA DUSHIMUMUKIZA**
+- **101379 KWIZERA RENE**
+- **101378 GRACE TETA**

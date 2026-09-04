@@ -127,7 +127,14 @@ for c in categorical_cols:
 ```
 - **Explanation**: Iterates through text columns. `F.trim()` removes trailing and leading spaces. `F.initcap()` converts strings to Title Case (e.g., `'FINE '` -> `'Fine'`). `withColumn` overwrites the existing column.
 - **Why Used**: Prevents artificial category splitting. Without `initcap(trim())`, PySpark `groupBy("Weather_Conditions")` would treat `'Fine'`, `'fine'`, and `'Fine '` as three separate weather categories, distorting counts.
+- 
+This line does four things, working from the inside out:
 
+F.col(c) — selects the column (e.g., "Weather_Conditions").
+.cast("string") — makes sure the column is treated as text, not some other data type.
+F.trim(...) — removes any extra spaces before or after the text. So " Fine " becomes "Fine".
+F.initcap(...) — capitalizes the first letter of each word and lowercases the rest. So "FINE" or "fine" both become "Fine".
+withColumn(c, ...) — takes the result and puts it back into the same column, replacing the old messy version.
 ```python
 # 2. Typo Correction using F.when()
 df_clean = df_clean.withColumn(
@@ -209,6 +216,36 @@ df = df.withColumn(
 ```
 - **Explanation**: `F.split(F.col("Time"), ":").getItem(0)` splits string timestamps (e.g. `"17:45"`) by colon and extracts the hour string (`"17"`), casting it to an integer.
 - **Why Used**: Converts unstructured time strings into numerical hour dimensions (0 to 23) for temporal aggregation.
+
+- Breaking this into pieces:
+
+1. F.when(F.col("Time").contains(":"), ...)
+This is a conditional check: "Does the Time column for this row contain a colon (:)?" This is Spark's way of checking whether Time looks like a proper time string (e.g. "17:45") rather than being empty, malformed, or missing.
+
+2. If yes — extract the hour from the Time string:
+
+python
+F.split(F.col("Time"), ":").getItem(0).cast("integer")
+F.split(F.col("Time"), ":") — breaks the string apart wherever there's a colon. So "17:45" becomes a list: ["17", "45"].
+.getItem(0) — grabs the first item in that list, which is the hour part — "17".
+.cast("integer") — converts that text "17" into an actual number (17), so it can be used in math, comparisons, and grouping later on.
+
+3. .otherwise(F.hour(F.col("Accident_Date")))
+This is the fallback: "If Time did not contain a colon" (meaning it's missing, blank, or badly formatted), then instead pull the hour directly from the Accident_Date column using Spark's built-in F.hour() function, which extracts the hour straight from a proper datetime value.
+
+4. df.withColumn("Hour_of_Day", ...)
+Takes whichever result applies (from step 2 or step 3) and stores it in a brand new column called Hour_of_Day.
+
+Why this matters — the bigger picture:
+
+Datasets are often messy in more than one way at once. Here, there are two possible sources of time information:
+
+A Time column stored as plain text (like "17:45")
+An Accident_Date column, which might be a proper datetime object that also stores time info
+
+Rather than assuming Time is always reliable, this code says: "Try to get the hour from the Time text field first — but if that field is broken or missing, fall back to pulling the hour from the Accident_Date field instead."
+
+This gives you a clean, reliable Hour_of_Day column (numbers from 0–23) no matter which of the two source columns actually has good data for a given row — which is essential if you want to later group or chart accidents by time of day (e.g. "most accidents happen between 5–7 PM").
 
 ```python
 # 2. Derive Custom Time Period Categories via Multi-Condition when()
